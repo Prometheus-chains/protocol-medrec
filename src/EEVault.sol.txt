@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.24;
+
+/// @notice Minimal opaque vault. Stores ciphertext by private tag.
+/// @dev For MVP, anyone can write; reads are by envelopeId derived internally.
+///      Tighten access rules later if needed for your L2.
+contract EEVault {
+    error DuplicateTag(bytes32 tag);
+
+    struct Envelope {
+        bytes32 tag;         // private locator (not revealed unless you want)
+        bytes   ciphertext;  // opaque bytes (AEAD)
+        uint64  seq;         // optional: client-provided sequence
+        address author;      // who wrote it
+    }
+
+    // Tag must be unique (one write per tag)
+    mapping(bytes32 => bytes32) public envelopeIdOfTag;
+    mapping(bytes32 => Envelope) public envelopeOfId;
+
+    event Stored(bytes32 indexed envelopeId, bytes32 indexed tag, uint64 seq, address author);
+
+    /// @notice Store ciphertext under a private tag. Returns an opaque envelopeId.
+    function put(bytes32 tag, bytes calldata ciphertext, uint64 seq) external returns (bytes32 envelopeId) {
+        if (envelopeIdOfTag[tag] != bytes32(0)) revert DuplicateTag(tag);
+        // Derive an id so callers can later fetch by id without revealing tag
+        envelopeId = keccak256(abi.encodePacked(tag, msg.sender, block.chainid, block.number));
+        envelopeIdOfTag[tag] = envelopeId;
+        envelopeOfId[envelopeId] = Envelope({
+            tag: tag,
+            ciphertext: ciphertext,
+            seq: seq,
+            author: msg.sender
+        });
+        emit Stored(envelopeId, tag, seq, msg.sender);
+    }
+
+    /// @notice Read ciphertext by envelopeId (tag remains private)
+    function getCiphertext(bytes32 envelopeId) external view returns (bytes memory) {
+        return envelopeOfId[envelopeId].ciphertext;
+    }
+}

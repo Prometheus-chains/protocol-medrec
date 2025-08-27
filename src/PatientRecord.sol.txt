@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.24;
+
+/// @title PatientRecord - owner-only append of plaintext content hashes
+contract PatientRecord {
+    address public immutable owner;
+    uint64  public seq; // 1..N
+
+    mapping(uint64 => bytes32) public contentHashAt;
+    mapping(uint64 => uint256) public l2ChainIdAt; // optional per-entry chainId
+
+    event Anchored(uint64 indexed seq, bytes32 contentHash, uint256 l2ChainId);
+
+    constructor(address _owner) {
+        require(_owner != address(0), "owner=0");
+        owner = _owner;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "not owner");
+        _;
+    }
+
+    /// @notice Append new content hash (hash of canonical plaintext FHIR bundle)
+    function anchor(bytes32 contentHash, uint256 l2ChainId) external onlyOwner {
+        unchecked { seq += 1; }
+        contentHashAt[seq] = contentHash;
+        l2ChainIdAt[seq] = l2ChainId;
+        emit Anchored(seq, contentHash, l2ChainId);
+    }
+}
