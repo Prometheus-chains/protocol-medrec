@@ -14,7 +14,7 @@ Healthcare’s data silos block trust and portability. Here the **patient** is t
 ## Contracts
 - `PatientRecord.sol` — owner-only append; `anchor(bytes32 contentHash, uint32 l2ChainId)`; `seq`, `contentHashAt(i)`
 - `PatientRecordFactory.sol` — one record per address; `createRecord()`, `recordOf(address)`
-- `EventVaultHashOnly.sol` (L2) — `put(bytes ciphertext, bytes16 tag) → bytes32 envelopeId`, plus reads by tag / id
+- `EEVault.sol` (L2) — `put(bytes ciphertext, bytes16 tag) → bytes32 envelopeId`, plus reads by tag / id
 
 ## Design highlights
 - **Anchor-first**: canonicalize FHIR JSON (stable stringify) → `sha256` → `contentHash` → append to L1.
